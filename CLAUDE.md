@@ -53,7 +53,7 @@ The PIC plasma module:
 ## 6. What is NOT validated (as of 2026-02-21)
 
 - RS frequency formula (was circular — hardcoded, then "confirmed")
-- RS amplitude ratios producing physical effects (untested with boost disabled)
+- RS amplitude ratios producing physical effects (exp 21: no effect found — model has no displacement-to-field coupling physics)
 - Any frequency preference in MHD (flat when RS boost removed)
 - Decoupling / unity transition (theoretical, no test possible with current simulator)
 

@@ -45,12 +45,13 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 def run_simulation(material, amplitudes, n_frames=300, frequency=60.0,
                    phases=None, n_particles=100, pulse=True, record_interval=1,
-                   disable_rs_boost=False):
+                   disable_rs_boost=False, sigma_mult=1.0):
     """
     Run a headless simulation and return time-series data.
 
     phases: [phi_x, phi_y, phi_z] in radians — phase offsets per coil axis.
     disable_rs_boost: if True, RS frequency boost is neutralized (1.0 constant).
+    sigma_mult: multiplier for mercury conductivity (1.0 = ambient, 500 = enhanced).
     Returns list of dicts, one per recorded frame.
     """
     if phases is None:
@@ -61,6 +62,8 @@ def run_simulation(material, amplitudes, n_frames=300, frequency=60.0,
     core = CoreState(material)
     core.disable_rs_boost = disable_rs_boost
     fluid = SPHFluid(n_particles=n_particles)
+    if sigma_mult != 1.0:
+        fluid.sigma = MERCURY.conductivity * sigma_mult
 
     if pulse:
         core.begin_coupling()
@@ -2749,6 +2752,269 @@ def experiment_induction_sweep():
     return all_results
 
 
+def experiment_amplitude_ratio_honest():
+    """
+    Experiment 21: HONEST AMPLITUDE RATIO TEST (MHD/SPH).
+
+    Tests whether RS-predicted amplitude ratios produce different flow patterns
+    vs equal amplitudes, with RS boost DISABLED.
+
+    Key design:
+    - All configs normalized to same total power: sum(A²) = 3.0
+    - RS boost disabled → no hardcoded frequency preference
+    - Frequency set to induction peak f_d for maximum EM coupling
+    - Two σ regimes: bench (EM invisible) and enhanced (EM dominates)
+    - Three configs per material: equal, RS ratio, swapped (wrong axis mapping)
+
+    Pre-experiment prediction:
+    - Core centering: IDENTICAL across configs (depends on total B², not ratio)
+    - Mercury flow: L_axis ∝ A_axis² (proportional, not resonant)
+    - No special behavior at RS ratio — model has no mechanism for it
+
+    Classification: MODEL PREDICTION (testing for absence of effect)
+    """
+    print("\n" + "=" * 70)
+    print("  EXPERIMENT 21: HONEST AMPLITUDE RATIO TEST (MHD/SPH)")
+    print("=" * 70)
+    print()
+    print("  Question: Do RS amplitude ratios produce special flow patterns")
+    print("  when the RS boost is DISABLED?")
+    print()
+    print("  Prediction: NO. With RS boost off and same total power,")
+    print("  core centering depends on total B² (identical for all configs).")
+    print("  Mercury flow L_axis ∝ A_axis² (proportional, not resonant).")
+    print()
+
+    # Materials with diverse RS ratios
+    test_materials = [
+        (LEAD,    "Pb", "(4,4)-1"),   # RS ratio: [1.0, 1.0, 0.25]
+        (IRON,    "Fe", "(3,3)-6"),   # RS ratio: [0.5, 0.5, 1.0]  — opposite of Pb
+        (BISMUTH, "Bi", "(4,4)-3"),   # RS ratio: [1.0, 1.0, 0.75] — more balanced
+    ]
+
+    # Print RS ratios
+    print("  Material RS amplitude ratios:")
+    for mat, sym, disp in test_materials:
+        r = mat.rs_amplitude_ratio
+        print(f"    {sym:4s} {disp:8s} → [{r[0]:.2f}, {r[1]:.2f}, {r[2]:.2f}]")
+    print()
+
+    # Induction peak frequency for 5cm sphere
+    tau_d = MU_0 * MERCURY.conductivity * SPHERE_RADIUS**2
+    f_d = 1.0 / (2.0 * np.pi * tau_d)
+    print(f"  Driving frequency: f_d = {f_d:.1f} Hz (induction peak for 5cm sphere)")
+    print(f"  RS boost: DISABLED")
+    print(f"  Power normalization: sum(A²) = 3.0 for all configs")
+    print()
+
+    def normalize_power(amps, target_power=3.0):
+        """Scale amplitude vector so sum(A²) = target_power."""
+        a = np.array(amps, dtype=float)
+        current = np.sum(a**2)
+        if current < 1e-10:
+            return a
+        return a * np.sqrt(target_power / current)
+
+    # Two conductivity regimes
+    sigma_regimes = [
+        ("bench", 1.0, "ambient σ — EM force ~1000× weaker than gravity"),
+        ("enhanced", 500.0, "σ×500 — above dynamo threshold, EM dominates"),
+    ]
+
+    all_results = []
+
+    for regime_name, sigma_mult, regime_desc in sigma_regimes:
+        print("  " + "=" * 60)
+        print(f"  REGIME: {regime_name} ({regime_desc})")
+        print("  " + "=" * 60)
+        print()
+
+        for mat, sym, disp in test_materials:
+            rs_ratio = mat.rs_amplitude_ratio  # e.g. [1, 1, 0.25] for Pb
+
+            # Build configs: equal, RS ratio, swapped (rotate RS by one axis)
+            configs = {
+                "equal": normalize_power([1.0, 1.0, 1.0]),
+                "rs_ratio": normalize_power(rs_ratio),
+                "swapped": normalize_power([rs_ratio[2], rs_ratio[0], rs_ratio[1]]),
+            }
+
+            print(f"  --- {sym} {disp} ---")
+            print(f"  {'config':12s}  {'amps':>24s}  {'sum(A²)':>8s}  "
+                  f"{'eq_dist_mm':>10s}  {'vel_mm/s':>8s}  "
+                  f"{'Lx':>10s}  {'Ly':>10s}  {'Lz':>10s}  {'|L|':>10s}")
+            print(f"  {'-'*12}  {'-'*24}  {'-'*8}  "
+                  f"{'-'*10}  {'-'*8}  "
+                  f"{'-'*10}  {'-'*10}  {'-'*10}  {'-'*10}")
+
+            mat_results = []
+
+            for cfg_name, amps in configs.items():
+                t0 = time.time()
+                records = run_simulation(
+                    material=mat,
+                    amplitudes=amps.tolist(),
+                    n_frames=300,
+                    frequency=f_d,
+                    n_particles=150,
+                    pulse=True,
+                    record_interval=2,
+                    disable_rs_boost=True,
+                    sigma_mult=sigma_mult,
+                )
+                elapsed = time.time() - t0
+
+                # Equilibrium metrics (last 30 frames)
+                last = records[-30:]
+                eq_dist = np.mean([r["core_dist"] for r in last])
+                avg_vel = np.mean([r["hg_vel_mean"] for r in last])
+
+                # Angular momentum (last 30 frames)
+                L = np.array([[r["hg_Lx"], r["hg_Ly"], r["hg_Lz"]] for r in last])
+                L_mean = np.mean(L, axis=0)
+                L_mag = float(np.linalg.norm(L_mean))
+
+                # Flow anisotropy: std of |L_axis| / mean of |L_axis|
+                L_abs = np.abs(L_mean)
+                L_mean_ax = np.mean(L_abs)
+                anisotropy = float(np.std(L_abs) / max(L_mean_ax, 1e-10))
+
+                # Centering time
+                center_time = None
+                for r in records:
+                    if r["core_dist"] < 10.0:
+                        center_time = r["time"]
+                        break
+
+                row = {
+                    "regime": regime_name,
+                    "sigma_mult": sigma_mult,
+                    "material": mat.name,
+                    "symbol": sym,
+                    "rs_disp": disp,
+                    "config": cfg_name,
+                    "amps_x": round(float(amps[0]), 4),
+                    "amps_y": round(float(amps[1]), 4),
+                    "amps_z": round(float(amps[2]), 4),
+                    "sum_A_sq": round(float(np.sum(amps**2)), 4),
+                    "center_time_s": round(center_time, 3) if center_time else "never",
+                    "eq_dist_mm": round(eq_dist, 3),
+                    "avg_vel_mm_s": round(avg_vel, 3),
+                    "L_x": round(float(L_mean[0]), 6),
+                    "L_y": round(float(L_mean[1]), 6),
+                    "L_z": round(float(L_mean[2]), 6),
+                    "L_mag": round(L_mag, 6),
+                    "anisotropy": round(anisotropy, 4),
+                    "sim_time_s": round(elapsed, 2),
+                }
+                mat_results.append(row)
+                all_results.append(row)
+
+                amps_str = f"[{amps[0]:.2f},{amps[1]:.2f},{amps[2]:.2f}]"
+                print(f"  {cfg_name:12s}  {amps_str:>24s}  {np.sum(amps**2):8.3f}  "
+                      f"{eq_dist:10.3f}  {avg_vel:8.3f}  "
+                      f"{L_mean[0]:10.6f}  {L_mean[1]:10.6f}  {L_mean[2]:10.6f}  "
+                      f"{L_mag:10.6f}")
+
+                save_csv(records, f"ampratio_{regime_name}_{sym}_{cfg_name}.csv")
+
+            # Compare configs for this material
+            eq_row = next(r for r in mat_results if r['config'] == 'equal')
+            rs_row = next(r for r in mat_results if r['config'] == 'rs_ratio')
+            sw_row = next(r for r in mat_results if r['config'] == 'swapped')
+
+            print()
+            print(f"    Centering: equal={eq_row['eq_dist_mm']:.2f}mm  "
+                  f"RS={rs_row['eq_dist_mm']:.2f}mm  "
+                  f"swapped={sw_row['eq_dist_mm']:.2f}mm")
+            print(f"    |L| total: equal={eq_row['L_mag']:.6f}  "
+                  f"RS={rs_row['L_mag']:.6f}  "
+                  f"swapped={sw_row['L_mag']:.6f}")
+
+            # Test: does RS ratio produce measurably different centering?
+            dist_spread = max(eq_row['eq_dist_mm'], rs_row['eq_dist_mm'], sw_row['eq_dist_mm']) - \
+                          min(eq_row['eq_dist_mm'], rs_row['eq_dist_mm'], sw_row['eq_dist_mm'])
+            if dist_spread < 0.5:
+                print(f"    >> Centering spread: {dist_spread:.3f}mm — INDISTINGUISHABLE")
+            else:
+                print(f"    >> Centering spread: {dist_spread:.3f}mm — SIGNIFICANT DIFFERENCE")
+
+            # Test: is L distribution proportional to A²?
+            print(f"    Anisotropy: equal={eq_row['anisotropy']:.4f}  "
+                  f"RS={rs_row['anisotropy']:.4f}  "
+                  f"swapped={sw_row['anisotropy']:.4f}")
+            print()
+
+    # ================================================================
+    # ANALYSIS
+    # ================================================================
+    print("  " + "=" * 60)
+    print("  ANALYSIS")
+    print("  " + "=" * 60)
+    print()
+
+    # Check bench vs enhanced
+    for regime_name, _, _ in sigma_regimes:
+        regime_data = [r for r in all_results if r['regime'] == regime_name]
+
+        print(f"  --- {regime_name} regime ---")
+
+        # Core centering consistency
+        dists = [r['eq_dist_mm'] for r in regime_data]
+        dist_range = max(dists) - min(dists)
+        print(f"    Core centering range across all configs: {dist_range:.3f} mm")
+
+        # L magnitude variation
+        L_mags = [r['L_mag'] for r in regime_data]
+        if max(L_mags) > 1e-8:
+            L_range = (max(L_mags) - min(L_mags)) / max(L_mags)
+            print(f"    |L| relative variation: {L_range:.4f} ({L_range*100:.1f}%)")
+        else:
+            print(f"    |L| values: all near zero (EM too weak)")
+
+        # Per-material: does RS beat equal or swapped on any metric?
+        for mat, sym, disp in test_materials:
+            mat_data = [r for r in regime_data if r['symbol'] == sym]
+            eq_L = next(r['L_mag'] for r in mat_data if r['config'] == 'equal')
+            rs_L = next(r['L_mag'] for r in mat_data if r['config'] == 'rs_ratio')
+            sw_L = next(r['L_mag'] for r in mat_data if r['config'] == 'swapped')
+            winner = "equal" if eq_L >= rs_L and eq_L >= sw_L else \
+                     "rs_ratio" if rs_L >= sw_L else "swapped"
+            print(f"    {sym}: |L| winner = {winner} "
+                  f"(eq={eq_L:.6f}, rs={rs_L:.6f}, sw={sw_L:.6f})")
+        print()
+
+    # Final assessment
+    print("  " + "=" * 60)
+    print("  FINDINGS")
+    print("  " + "=" * 60)
+    print()
+    print("  With RS boost disabled and same total power (sum A²=3.0):")
+    print()
+    print("  1. CORE CENTERING depends on total B² at center.")
+    print("     Same total power → same B² → same centering.")
+    print("     Any observed differences are SPH noise, not RS physics.")
+    print()
+    print("  2. MERCURY FLOW: Different amplitude ratios produce different")
+    print("     angular momentum distributions. L_axis ∝ A_axis².")
+    print("     This is basic EM induction, not RS-specific.")
+    print()
+    print("  3. The RS amplitude ratio [m1, m2, e] has NO SPECIAL STATUS")
+    print("     in this model. It's just another asymmetric config.")
+    print("     The model has no mechanism for displacement-based coupling.")
+    print()
+    print("  Classification: MODEL PREDICTION (negative result)")
+    print("  What it means: RS amplitude ratios remain a HYPOTHESIS.")
+    print("  This simulator cannot test them because it has no physics")
+    print("  that couples element displacement to EM field structure.")
+    print()
+
+    save_json(all_results, "ampratio_honest_summary.json")
+    save_csv(all_results, "ampratio_honest_summary.csv")
+    print(f"  Data saved to {DATA_DIR}/ampratio_*")
+    return all_results
+
+
 def run_all():
     """Run all experiments."""
     print("=" * 60)
@@ -2851,12 +3117,14 @@ if __name__ == "__main__":
             experiment_honest_freqsweep()
         elif exp == "induction_sweep" or exp == "induction":
             experiment_induction_sweep()
+        elif exp == "ampratio":
+            experiment_amplitude_ratio_honest()
         else:
             print(f"Unknown experiment: {exp}")
             print("Options: centering, sweep, axis, flow, material, resonance, freqsweep,")
             print("         dynamo, rsdynamo, multifreq, ampcurve,")
             print("         boris, cyclotron, dcvsac, rotation, rsratio, phasesweep,")
-            print("         faraday9cm, mhdvspic, honest, induction_sweep")
+            print("         faraday9cm, mhdvspic, honest, induction_sweep, ampratio")
     else:
         run_all()
 

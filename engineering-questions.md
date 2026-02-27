@@ -41,23 +41,15 @@
 - Podkletnov IGG: single 60-70ns pulse
 - Pais: 10⁹ to 10¹⁸Hz (vibration), 10⁷Hz+ (microwave)
 
-**SIMULATOR FINDINGS (Feb 2026):**
-- RS displacement values predict optimal coil parameters per element
-- Lead (RS=9): amplitude ratio [1.0, 1.0, 0.25], frequency 40.5 Hz, phase [0°, 0°, 11.25°]
-- Copper (RS=7): amplitude ratio [1.0, 1.0, 0.33], frequency 24.5 Hz, phase [0°, 0°, 7.5°]
-- Iron (RS=12): amplitude ratio [0.5, 0.5, 1.0], frequency 72 Hz, phase [0°, 0°, 45°]
-- **Frequency sweep for Pb shows resonance peak at exactly 40 Hz** (RS predicts 40.5 Hz)
-  - 5 Hz → 10.9mm eq, 20 Hz → 6.2mm, **40 Hz → 4.6mm (peak)**, 60 Hz → 5.4mm, 200 Hz → 9.5mm
-- **FREQUENCY FORMULA VALIDATED 5/5 ELEMENTS** (exp 10, Feb 2026):
-  - Cu: predicted 24.5 Hz → actual 24.5 Hz (0.0% error)
-  - Fe: predicted 72.0 Hz → actual 72.0 Hz (0.0% error)
-  - Bi: predicted 60.5 Hz → actual 60.0 Hz (0.8% error)
-  - Al: predicted 24.5 Hz → actual 24.5 Hz (0.0% error)
-  - Pb: predicted 40.5 Hz → actual 40.0 Hz (1.2% error) — from exp 7
-  - **Formula confirmed: f_optimal = 50 × (total_displacement / 10)² Hz**
-- RS-tuned parameters outperform equal [1,1,1] for all 8 materials tested (1.04x–1.68x improvement)
-- Wrong-element tuning performs worse than generic — specificity matters
-- **Phase relationship**: magnetic axes in-phase (0° offset), electric axis in quadrature (~90° scaled by e/(m1+m2))
+**~~SIMULATOR FINDINGS~~ RETRACTED (audit 2026-02-22):**
+All findings below were produced with `rs_resonance_boost` active in `core_dynamics.py`, which hardcoded a 0.5x-2x force multiplier favoring RS-predicted parameters. Results are CIRCULAR.
+- RS displacement values predict optimal coil parameters per element — these are RS HYPOTHESES, not simulator findings
+- Lead (RS=9): amplitude ratio [1.0, 1.0, 0.25], frequency 40.5 Hz, phase [0°, 0°, 11.25°] — RS predictions, not validated
+- ~~**Frequency sweep for Pb shows resonance peak at exactly 40 Hz**~~ — CIRCULAR. Peak was the `rs_resonance_boost` sigmoid, not emergent physics. Experiment 19 (boost disabled): frequency sweep is COMPLETELY FLAT.
+- ~~**FREQUENCY FORMULA VALIDATED 5/5 ELEMENTS**~~ — CIRCULAR. The 0.0% error results confirm the code implements the formula, not that the physics produces these frequencies. Formula remains UNTESTED HYPOTHESIS.
+- ~~RS-tuned parameters outperform equal [1,1,1] for all 8 materials~~ — CIRCULAR. Experiment 21 (boost disabled): RS amplitude ratios have NO special status. Centering identical across configs.
+- ~~Wrong-element tuning performs worse than generic~~ — CIRCULAR. The boost penalized non-matching configs.
+- Phase relationship predictions remain UNTESTED RS hypotheses.
 
 **DYNAMO THRESHOLD FINDINGS (Feb 2026):**
 - Self-sustaining dynamo requires Rm > 10 (magnetic Reynolds number)
@@ -65,7 +57,7 @@
 - **Superconducting mercury (4.2K)**: Rm ≈ 3089 at bench scale → 864x power amplification
 - **Liquid sodium (1m sphere)**: Rm ≈ 12 → barely self-sustaining (established technology)
 - Dynamo onset is sharp — below threshold, induced field decays to zero; above, exponential growth to saturation
-- **Dynamo transition is SHARP** (exp 11): gap of only Δσ×25, amplification ∝ σ^4.05 — consistent with RS sector boundary
+- **Dynamo transition is SHARP** (exp 11): gap of only Δσ×25, amplification ∝ σ^4.05 — standard MHD critical-transition physics
 - **RS tuning does NOT affect dynamo threshold** (exp 9): all configs cross at σ×400 (Rm≈10) regardless of tuning
 - **~~Clemens pulse boosts σ for dynamo~~** — **FALSIFIED** (Feb 2026): Hg plasma σ ≈ 6,800 S/m at 10,000K, which is 150× WORSE than liquid Hg (1.04×10⁶ S/m). Plasma destroys free electron density.
 - **REINTERPRETATION**: Clemens pulse is about state transition (liquid → plasma), enabling direct EM coupling to individual charged particles, NOT about boosting conductivity for classical dynamo. The device is NOT a classical dynamo — it's a quaternion field manipulator acting on ionized mercury.
@@ -145,14 +137,12 @@
 - Container: must be non-reactive with mercury (glass, ceramic, some metals)
 - Shielding: boron carbide for neutrons (Clemens), lead for radiation
 
-**SIMULATOR FINDINGS — Material-RS Correlation (Feb 2026):**
-- 8 core materials tested with RS displacement values from Larson's periodic table
-- Materials with higher RS total displacement show stronger coupling (Fe=12 > Bi=11 > Sn=10 > Pb=9 > Cu/Ag/Al=7)
-- Symmetric magnetic displacement (m1=m2) produces better coupling than asymmetric
-- Lead and Gold share identical RS displacements (4,4)-1 = same predicted optimal config — simulator confirms similar behavior
-- Copper and Silver share RS pattern (3,3)-1 — simulator confirms nearly identical response curves
-- **RS periodic table groupings predict electromagnetic behavior that conventional periodic table groupings don't**
-- Al never reaches <10mm centering (buoyancy dominates — too light for Hg), but RS-tuned still 1.7x better
+**~~SIMULATOR FINDINGS~~ RETRACTED — Material-RS Correlation (audit 2026-02-22):**
+- ~~Materials with higher RS total displacement show stronger coupling~~
+- ~~Symmetric magnetic displacement produces better coupling~~
+- **CIRCULAR**: The correlation was hardcoded via `rs_coupling_factor` in `materials.py`, which computes coupling directly from RS displacement values. The "finding" was reading back its own assumptions. This had NO disable flag prior to audit.
+- Pb/Au and Cu/Ag grouping similarity may also be artifacts of identical `rs_coupling_factor` values.
+- **What survives**: Buoyancy differences are real physics (density-dependent). Al's poor centering is real (too light for Hg).
 
 **What we don't know:**
 - Why thorium specifically? (Radioactivity? Atomic structure? Something about thorium's nuclear/electronic properties?)
@@ -172,13 +162,13 @@
 If building toward a prototype, the progression would be:
 
 1. **Tabletop mercury EM interaction** — Mercury in sealed glass vessel, apply EM fields across three axes, measure any anomalous weight/inertia changes with precision balance. No high voltage yet. Characterize baseline.
-   - **Simulator guidance**: Start with 3 orthogonal Helmholtz pairs. Use RS-predicted frequency for Pb core: ~40 Hz. Amplitude ratio [1.0, 1.0, 0.25] with electric axis in quadrature.
+   - **Starting parameters (RS hypothesis, not validated)**: 3 orthogonal Helmholtz pairs. RS-hypothesized frequency for Pb core: ~40 Hz. Amplitude ratio [1.0, 1.0, 0.25]. These are reasonable starting points for sweeps but have no simulator validation — the original "validation" was circular.
 
 2. **Single-axis high-voltage pulse** — Marx generator or capacitor bank, single discharge through mercury. Measure with piezoelectric sensors (Podkletnov's approach). Look for impulse/weight anomaly.
    - **Simulator guidance**: Single-axis centering is significantly weaker (axis removal experiment). Expect partial effect only. Use this to calibrate force measurement equipment.
 
 3. **Three-axis configuration** — Three orthogonal coil pairs around mercury vessel. Independent control of each axis. Systematic parameter sweep (frequency, phase, power).
-   - **Simulator guidance**: Sweep frequency 20–80 Hz for Pb (peak expected ~40 Hz). For each material, RS predicts: freq = 50 × (total_displacement / 10)² Hz. Start with RS-predicted amplitude ratios, then sweep ±30% around each parameter.
+   - **Sweep parameters (RS hypothesis, not validated)**: Sweep frequency broadly (5–200 Hz) for Pb — do NOT expect a peak at 40 Hz (that was circular). Also check textbook eddy-current peak f_d = 1/(2πμ₀σR²). Start with equal amplitudes [1,1,1] as baseline, then test RS-predicted ratios as one option among others.
 
 4. **Dynamo threshold test** — Measure whether self-reinforcing currents emerge under any achievable conditions.
    - **Simulator guidance**: Ambient mercury won't reach dynamo at bench scale (Rm ≈ 0.03, need Rm > 10).
@@ -191,7 +181,7 @@ If building toward a prototype, the progression would be:
 5. **Thorium doping** — Add thorium dioxide per Clemens spec. Compare to undoped. (Requires radiation safety protocols.)
 
 6. **Pulsed three-axis with doped mercury** — The full configuration. Phase relationship sweep. Look for the resonance condition.
-   - **Simulator guidance**: Phase sweep should test 0°–90° offset on electric axis, 0°–30° between magnetic axes. RS predicts optimal at [0°, 0°, ~11°] for Pb.
+   - **Phase sweep (RS hypothesis, not validated)**: Test 0°–90° offset on electric axis, 0°–30° between magnetic axes. RS predicts optimal at [0°, 0°, ~11°] for Pb — this has not been validated (PIC experiment 16 found very small phase effects, peak at 180° not the RS-predicted 22°).
 
 7. **Consciousness interface testing** — Skilled practitioner + instrumented device. Measure whether conscious intention correlates with EM field changes or device response.
 

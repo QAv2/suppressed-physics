@@ -1,5 +1,19 @@
 """Core dynamics — forces and motion of the solid core sample in the EM field.
 
+AUDIT NOTE (2026-02-22): This module contains two RS-theory mechanisms that
+bias results if enabled. Both are now DISABLED by default (safe-by-default):
+
+  1. rs_resonance_boost — sigmoid that rewards RS-predicted freq/amp/phase
+     with up to 2x force multiplier. Caused circular "validation" in exp 6,7,10.
+     Controlled by: CoreState.disable_rs_boost (default True)
+
+  2. rs_coupling_factor — material-dependent multiplier derived from RS
+     displacement values. Biases cross-material comparisons. Had NO disable
+     flag prior to this audit.
+     Controlled by: CoreState.disable_rs_coupling (default True)
+
+  To re-enable for RS hypothesis testing, set both flags to False explicitly.
+
 The core has two states:
 
 DORMANT: Coils off. Only buoyancy acts. Core floats (if lighter than Hg) or sinks.
@@ -7,6 +21,7 @@ DORMANT: Coils off. Only buoyancy acts. Core floats (if lighter than Hg) or sink
 COUPLED: After EM pulse forces Cooper pairing, the core becomes magnetically active.
   The mechanism: pulse → forced Cooper pairing → superconductor-like state →
   Meissner effect + flux pinning → core locks to the field geometry center.
+  NOTE: Room-temperature Cooper pairing is a HYPOTHESIS, not established physics.
 
   This is modeled as:
   1. Flux pinning force: strong spring toward the combined field's locus point
@@ -64,7 +79,8 @@ class CoreState:
         # RS resonance state
         self.rs_mismatch = 1.0         # How far from RS-optimal (0=perfect, higher=worse)
         self.rs_resonance_boost = 1.0  # Multiplier from RS tuning (1.0 = no effect)
-        self.disable_rs_boost = False  # When True, rs_resonance_boost fixed at 1.0
+        self.disable_rs_boost = True   # DEFAULT ON: neutralizes rs_resonance_boost to 1.0
+        self.disable_rs_coupling = True  # DEFAULT ON: neutralizes rs_coupling_factor to 1.0
 
         # Force tracking (for UI display)
         self.f_magnetic = np.zeros(3)
@@ -120,9 +136,13 @@ class CoreState:
         has_field = B_center_mag2 > 1e-6
 
         # Coupling rate is modified by RS resonance and material coupling factor
+        # NOTE: Both RS mechanisms are disabled by default (safe-by-default).
+        # rs_coupling_factor is derived entirely from RS displacement values —
+        # it biases cross-material comparisons if enabled. See audit 2026-02-22.
+        rs_cf = 1.0 if self.disable_rs_coupling else mat.rs_coupling_factor
         effective_coupling_rate = (self.coupling_rate
                                    * self.rs_resonance_boost
-                                   * mat.rs_coupling_factor)
+                                   * rs_cf)
 
         if self.state == STATE_COUPLING:
             self.coupling_strength = min(1.0, self.coupling_strength + effective_coupling_rate * dt)

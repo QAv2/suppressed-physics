@@ -5,3 +5,4 @@ simulator/data/
 *.egg-info/
 .venv/
 .env
+*.blend1

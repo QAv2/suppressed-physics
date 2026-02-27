@@ -42,18 +42,21 @@ The PIC plasma module:
 - Has NO collective effects (no particle-particle interaction)
 - CANNOT test: collective plasma modes, wave propagation, instabilities
 
-## 5. What IS validated (as of 2026-02-21)
+## 5. What IS validated (as of 2026-02-22, post clean reruns)
 
 - **3D plasma rotation** (Q_3d ≈ 1.0): Real PIC physics, Boris pusher verified
-- **Dynamo threshold** (Rm ≈ 10): Real SPH physics, sharp transition
+- **Dynamo threshold** (Rm ≈ 10): Real SPH physics, sharp transition, RS-independent (confirmed clean rerun)
 - **Cyclotron resonance impossible at bench B**: Pencil math, textbook Biot-Savart
 - **Eddy-current coupling η(ω)**: Analytical peak at f_d = 1/(2πμ₀σR²), verified (exp 20)
 - **Faraday induction monotonic** (∝ f^0.87): Real PIC, no resonance peak
+- **Centering = density physics**: Clean reruns (exp 1,3,5) identical with/without RS mechanisms. Equilibrium driven by Δρ from mercury (Archimedes) + field gradient geometry. RS coupling factor only scaled approach speed, not final position.
+- **Axis hierarchy (3>2>1)**: Real field geometry, confirmed identical in clean rerun (exp 3)
 
-## 6. What is NOT validated (as of 2026-02-21)
+## 6. What is NOT validated (as of 2026-02-22)
 
-- RS frequency formula (was circular — hardcoded, then "confirmed")
-- RS amplitude ratios producing physical effects (exp 21: no effect found — model has no displacement-to-field coupling physics)
+- RS frequency formula (was circular — hardcoded, then "confirmed"; flat when disabled)
+- RS amplitude ratios producing physical effects (exp 21: no effect found)
+- RS coupling factor affecting equilibrium (clean reruns: zero effect on final positions)
 - Any frequency preference in MHD (flat when RS boost removed)
 - Decoupling / unity transition (theoretical, no test possible with current simulator)
 

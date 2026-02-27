@@ -73,6 +73,8 @@ class Material:
     def rs_amplitude_ratio(self) -> np.ndarray:
         """
         Optimal coil amplitude ratio derived from RS displacement.
+        WARNING: This is an RS HYPOTHESIS, not validated physics.
+        Experiment 21 found NO special status for these ratios.
 
         Normalized so the maximum component = 1.0.
         Maps displacement components directly to coil axes:
@@ -90,13 +92,12 @@ class Material:
     def rs_optimal_frequency(self) -> float:
         """
         Optimal coil frequency derived from RS displacement.
+        WARNING: This is an RS HYPOTHESIS. Simulator "validation" (exp 7, 10)
+        was CIRCULAR — the frequency preference was hardcoded via rs_resonance_boost.
+        When the boost was disabled (exp 19), frequency sweeps were FLAT.
+        This formula remains UNTESTED.
 
-        Higher total displacement = higher natural rotation frequency.
-        Scaled relative to mercury (the working fluid) as reference.
-
-        The physical reasoning: displacement from the natural datum (c)
-        determines the element's characteristic scalar motion frequency.
-        More displacement = higher frequency harmonic.
+        f = 50 * (total_displacement / 10)^2 Hz
         """
         td = self.rs_total_displacement
         if td < 1:
@@ -107,6 +108,9 @@ class Material:
     def rs_phase_offsets(self) -> np.ndarray:
         """
         Optimal phase offsets between coil axes (radians).
+        WARNING: RS HYPOTHESIS. No physical derivation for why "electric
+        displacement" should correspond to a 90-degree phase offset.
+        Feeds into rs_resonance_mismatch with 25% weight.
 
         RS predicts:
           - Two magnetic axes share rotational character → in phase (0° offset)
@@ -141,13 +145,15 @@ class Material:
     def rs_coupling_factor(self) -> float:
         """
         RS-derived coupling efficiency factor.
+        WARNING: This is PURE RS THEORY with no physical derivation. None of
+        these relationships (symmetry→coupling, magnetic fraction→strength,
+        displacement→coupling) are derived from any physical equation.
+        DISABLED by default in CoreState (disable_rs_coupling=True) since
+        audit 2026-02-22. Biases all cross-material comparisons if enabled.
 
         How well this material couples to a field tuned to its displacement.
         Based on the match between the material's displacement structure
         and the field's structure.
-
-        Higher magnetic displacement → stronger rotational coupling
-        Symmetric magnetic (m1==m2) → better coupling (balanced rotation)
         """
         m1, m2 = self.rs_magnetic
         e = self.rs_electric
@@ -332,6 +338,16 @@ TITANIUM = Material(
     rs_magnetic=(3, 3), rs_electric=4,  # Period 4, Group 4 (IVB)
 )
 
+THORIUM = Material(
+    name="Thorium", symbol="Th",
+    density=11724.0,
+    conductivity=6.67e6,
+    susceptibility=8.4e-5,
+    viscosity=0.0,
+    color=(160, 155, 140),
+    rs_magnetic=(4, 4), rs_electric=4,  # Period 7 actinide, total displacement 12
+)
+
 YBCO = Material(
     name="YBCO", symbol="YBCO",
     density=6300.0,
@@ -343,13 +359,13 @@ YBCO = Material(
 )
 
 # Core materials for the simulator (cycleable with M key)
-CORE_MATERIALS = [LEAD, ALUMINUM, COPPER, IRON, BISMUTH, GOLD, SILVER, TIN]
+CORE_MATERIALS = [LEAD, ALUMINUM, COPPER, IRON, BISMUTH, GOLD, SILVER, TIN, THORIUM]
 FLUID_MATERIAL = MERCURY
 
 # Full database for RS analysis
 ALL_MATERIALS = [
     LEAD, ALUMINUM, COPPER, IRON, BISMUTH, MERCURY,
-    GOLD, SILVER, TIN, ZINC, TUNGSTEN, TITANIUM,
+    GOLD, SILVER, TIN, ZINC, TUNGSTEN, TITANIUM, THORIUM,
 ]
 
 

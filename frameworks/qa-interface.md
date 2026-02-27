@@ -111,7 +111,7 @@ Coil amplitudes:
   A_z(t) = A_base × (1 + a_z(t)) × M_RS[2,2]
 
 Coil frequency:
-  f = f_RS = 50 × (total_displacement / 10)²  Hz
+  f = f_RS = 50 × (total_displacement / 10)²  Hz    ← RS HYPOTHESIS (not validated; simulator "validation" was circular)
 
 Coil phases:
   φ_x = 0

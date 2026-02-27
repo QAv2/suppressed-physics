@@ -56,25 +56,25 @@
 ### Frequency (for AC/oscillating mode)
 - **Podkletnov disc**: 50Hz to 10⁶Hz (gravity shielding appeared across range)
 - **Pais**: 10⁹–10¹⁸Hz (vibration) — possibly unrealistic without exotic materials
-- **RS-predicted optimal frequencies** (from simulator, Feb 2026):
+- **RS-predicted optimal frequencies** (HYPOTHESIS — not validated):
 
-| Element | RS Total | Predicted Freq (Hz) | Simulator Confirmed |
+| Element | RS Total | Predicted Freq (Hz) | Status |
 |---|---|---|---|
-| Al | 7 | 24.5 | **Yes — peak at 24.5 Hz (0.0% error)** |
-| Cu, Ag | 7 | 24.5 | **Yes — peak at 24.5 Hz (0.0% error)** |
-| Pb, Au | 9 | 40.5 | **Yes — peak at 40 Hz (1.2% error)** |
-| Sn | 10 | 50.0 | — |
-| Bi | 11 | 60.5 | **Yes — peak at 60 Hz (0.8% error)** |
-| Fe | 12 | 72.0 | **Yes — peak at 72 Hz (0.0% error)** |
-| W | 14 | 98.0 | — |
+| Al | 7 | 24.5 | UNTESTED (simulator "confirmation" was circular) |
+| Cu, Ag | 7 | 24.5 | UNTESTED (simulator "confirmation" was circular) |
+| Pb, Au | 9 | 40.5 | UNTESTED (simulator "confirmation" was circular) |
+| Sn | 10 | 50.0 | UNTESTED |
+| Bi | 11 | 60.5 | UNTESTED (simulator "confirmation" was circular) |
+| Fe | 12 | 72.0 | UNTESTED (simulator "confirmation" was circular) |
+| W | 14 | 98.0 | UNTESTED |
 | Hg (fluid) | 10 | 50.0 | (reference) |
 
-- Formula: **f_optimal = 50 × (total_displacement / 10)² Hz — VALIDATED 5/5 elements**
-- All 5 tested elements peak within 1.2% of RS prediction. Formula is confirmed across the periodic table.
-- **Working assumption**: Use RS-predicted frequency as starting point. Sweep ±30% to bracket, but expect peak at prediction.
+- Formula: **f_optimal = 50 × (total_displacement / 10)² Hz — HYPOTHESIS (UNTESTED)**
+- ~~VALIDATED 5/5 elements~~ **RETRACTED (audit 2026-02-22)**: The "5/5 match" was CIRCULAR. The simulator's `rs_resonance_boost` in `core_dynamics.py` hardcoded a sigmoid that rewarded RS-predicted frequencies with up to 2x force multiplier. When this boost was disabled (experiment 19), frequency sweeps were COMPLETELY FLAT — no frequency preference at all. The formula remains an untested RS theory prediction.
+- **Working assumption**: Use RS-predicted frequency as one starting point among others. Also test textbook eddy-current peak f_d = 1/(2πμ₀σR²) and broad sweeps. Do NOT expect a peak at the RS prediction — it has no simulator support.
 
-### Amplitude Ratios (RS-derived, per element)
-From simulator RS resonance experiments (Feb 2026):
+### Amplitude Ratios (RS-derived, per element) — HYPOTHESIS ONLY
+From RS displacement theory (Larson). These are theoretical predictions, NOT simulator-validated findings.
 
 | Element | RS Displacement (m1,m2)-e | Amplitude Ratio [X,Y,Z] | Phase [°] |
 |---|---|---|---|
@@ -86,12 +86,11 @@ From simulator RS resonance experiments (Feb 2026):
 | Sn | (3,3)-4 | [0.75, 0.75, 1.00] | [0, 0, 30.0] |
 | Hg | (4,4)-2 | [1.00, 1.00, 0.50] | [0, 0, 14.0] |
 
-Key findings:
-- **Equal amplitudes [1,1,1] are suboptimal for every element**
-- Magnetic-dominant elements (Cu, Ag, Pb, Au): boost magnetic axes, reduce electric axis
-- Electric-dominant elements (Fe, Sn): boost electric axis, reduce magnetic axes
-- Two magnetic axes are always in-phase (0° offset between X and Y)
-- Electric axis offset scales with e/(m1+m2) ratio
+~~Key findings~~ **RETRACTED (audit 2026-02-22)**:
+- ~~Equal amplitudes [1,1,1] are suboptimal for every element~~ — This "finding" came from experiments where `rs_resonance_boost` was active, rewarding RS-matched amplitudes with up to 2x force multiplier. The result was CIRCULAR.
+- **Experiment 21 (honest test, RS boost disabled)**: RS amplitude ratios have NO special status. Core centering IDENTICAL across equal/RS/swapped configs (spread < 0.012mm = noise). Mercury flow stochastic — RS ratio NEVER wins.
+- The amplitude ratios remain RS theory HYPOTHESES. The simulator model lacks the physics (displacement-to-field coupling) that could test them.
+- Phase offsets are similarly untested RS predictions.
 
 ### Mercury Mass
 - **Not specified by anyone** in precise terms
@@ -113,7 +112,7 @@ From simulator dynamo experiment (Feb 2026):
 
 **Dynamo transition shape** (experiment 11, Feb 2026):
 - Transition is **sharp**: last sub-critical at σ×325 (Rm=9.9), first supercritical at σ×350 (Rm=10.7)
-- Transition gap: Δσ×25 — consistent with RS sector boundary prediction (discrete, not gradual)
+- Transition gap: Δσ×25 — this is standard MHD critical-transition physics (not specific to RS theory)
 - Amplification growth: **amp ∝ σ^4.05** — very steep power law above threshold
 - From σ×350 (amp=1.0x) to σ×500 (amp=6.2x) is only 1.4× increase in σ
 

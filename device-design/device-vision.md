@@ -188,7 +188,7 @@ What are the conditions for the mercury dynamo to become self-sustaining?
 - The transition is sharp — below Rm_crit the induced field decays to zero; above it, it grows exponentially until back-reaction saturates it
 - At Rm=3089 (SC mercury), the system generates **864× more field than the external coils provide** — the coils become control surfaces, not power inputs. This matches the device vision exactly.
 - Pure scaling (bigger device, ambient Hg) is insufficient — even 5m radius barely reaches Rm=3. Mercury's ambient conductivity is too low. The device needs either cryogenic superconducting mercury or an alternative high-σ fluid.
-- **Implication**: Clemens's high-voltage pulse may serve a dual purpose — ionizing mercury to plasma state (dramatically increasing σ) AND providing the activation energy. Plasma mercury could push σ high enough for dynamo at bench scale.
+- ~~**Implication**: Clemens's high-voltage pulse may serve a dual purpose — ionizing mercury to plasma state (dramatically increasing σ) AND providing the activation energy. Plasma mercury could push σ high enough for dynamo at bench scale.~~ **FALSIFIED (Feb 2026)**: Mercury plasma σ is 150× WORSE than liquid (Spitzer conductivity analysis). Classical dynamo via plasma is NOT viable. The Clemens pulse serves a different purpose — transitioning the coupling mechanism from bulk eddy currents to individual particle EM response.
 
 ### Q4: Decoupling Gradient
 When the reference frame decouples, is the boundary:

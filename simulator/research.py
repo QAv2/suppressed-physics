@@ -45,14 +45,19 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 def run_simulation(material, amplitudes, n_frames=300, frequency=60.0,
                    phases=None, n_particles=100, pulse=True, record_interval=1,
-                   disable_rs_boost=False, sigma_mult=1.0):
+                   disable_rs_boost=True, disable_rs_coupling=True,
+                   sigma_mult=1.0):
     """
     Run a headless simulation and return time-series data.
 
     phases: [phi_x, phi_y, phi_z] in radians — phase offsets per coil axis.
-    disable_rs_boost: if True, RS frequency boost is neutralized (1.0 constant).
+    disable_rs_boost: if True (DEFAULT), RS frequency boost neutralized to 1.0.
+    disable_rs_coupling: if True (DEFAULT), RS coupling factor neutralized to 1.0.
     sigma_mult: multiplier for mercury conductivity (1.0 = ambient, 500 = enhanced).
     Returns list of dicts, one per recorded frame.
+
+    NOTE (audit 2026-02-22): Both RS mechanisms default to DISABLED.
+    To test RS hypotheses, set both to False explicitly and document why.
     """
     if phases is None:
         phases = np.array([0.0, 0.0, 0.0])
@@ -61,6 +66,7 @@ def run_simulation(material, amplitudes, n_frames=300, frequency=60.0,
 
     core = CoreState(material)
     core.disable_rs_boost = disable_rs_boost
+    core.disable_rs_coupling = disable_rs_coupling
     fluid = SPHFluid(n_particles=n_particles)
     if sigma_mult != 1.0:
         fluid.sigma = MERCURY.conductivity * sigma_mult
@@ -173,6 +179,11 @@ def save_json(data, filename):
 
 def experiment_centering():
     """
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. Cross-material centering differences
+    are contaminated by rs_coupling_factor.
+
     Experiment 1: Core centering dynamics for each material.
     Measures: time to center, equilibrium offset, force balance.
     """
@@ -249,6 +260,11 @@ def experiment_centering():
 
 def experiment_amplitude_sweep():
     """
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. Absolute centering values inflated by
+    RS boost. Relative scaling trend may be valid.
+
     Experiment 2: How does coil amplitude affect centering?
     Sweeps amplitude from 0.2 to 3.0 for Lead.
     """
@@ -298,6 +314,11 @@ def experiment_amplitude_sweep():
 
 def experiment_axis_removal():
     """
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. RS boost may inflate 3-axis advantage.
+    Qualitative result (3>2>1) likely valid, quantitative values contaminated.
+
     Experiment 3: What happens when you remove coil axes?
     Tests: all three, X+Y only, X only, Y only, Z only.
     This directly tests the "three dimensions required" hypothesis.
@@ -365,6 +386,11 @@ def experiment_axis_removal():
 
 def experiment_flow_analysis():
     """
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. EM drive magnitude modulated by RS boost.
+    Flow patterns may differ without it.
+
     Experiment 4: Mercury flow patterns under different configurations.
     Focuses on vortex structure, angular momentum, and flow symmetry.
     """
@@ -428,7 +454,12 @@ def experiment_flow_analysis():
 
 def experiment_material_comparison():
     """
-    Experiment 5: Detailed material comparison — correlate RS displacement
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. RS displacement-centering correlation
+    is PURE CIRCULARITY -- rs_coupling_factor directly converts displacement to force.
+
+    Experiment 5: Detailed material comparison -- correlate RS displacement
     with centering behavior.
     """
     print("\n=== EXPERIMENT: Material-RS Correlation ===")
@@ -489,6 +520,12 @@ def experiment_material_comparison():
 
 def experiment_rs_resonance():
     """
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. CANONICAL CIRCULAR EXPERIMENT. RS boost
+    rewards RS-matched configs with 2x force. Improvement ratios measure the boost,
+    not physics.
+
     Experiment 6: THE RS RESONANCE TEST.
 
     For each material, compare:
@@ -643,7 +680,12 @@ def experiment_rs_resonance():
 
 def experiment_frequency_sweep():
     """
-    Experiment 7: Frequency sweep for Lead — find the resonance peak.
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. CIRCULAR. Peak at RS-predicted frequency
+    is the rs_resonance_boost sigmoid, not emergent physics. See experiment 19.
+
+    Experiment 7: Frequency sweep for Lead -- find the resonance peak.
 
     Sweep frequency from 5Hz to 200Hz and measure centering performance.
     RS predicts optimal at ~40.5Hz for Lead (total_displacement=9).
@@ -691,7 +733,7 @@ def experiment_frequency_sweep():
         }
         summary.append(row)
 
-        peak = " <<< RS PREDICTED" if 38 < freq < 43 else ""
+        peak = " <<< RS HYPOTHESIS" if 38 < freq < 43 else ""
         print(f"  {freq:4d} Hz: eq={eq_dist:5.1f}mm  t10={str(t_10 or 'never'):>6s}  "
               f"mismatch={rs_mismatch:.3f}  boost={rs_boost:.2f}x  ({elapsed:.1f}s){peak}")
 
@@ -856,10 +898,13 @@ def run_dynamo_simulation(sigma_multiplier=1.0, scale_factor=1.0,
 
 def experiment_dynamo_threshold():
     """
+    NOTE (audit 2026-02-22): RS boost active but has minimal influence on dynamo
+    physics (Rm-based threshold). Results mostly valid.
+
     Experiment 8: DYNAMO THRESHOLD SEARCH.
 
     The dynamo effect is how planets generate self-sustaining magnetic fields:
-    flowing conductive fluid → induced currents → induced B field → more flow.
+    flowing conductive fluid -> induced currents -> induced B field -> more flow.
     Critical threshold: magnetic Reynolds number Rm > Rm_crit (~10).
 
     Bench-scale mercury (5cm sphere, ambient σ): Rm ≈ 0.007. Three orders of
@@ -1059,17 +1104,22 @@ def experiment_dynamo_threshold():
 
 def experiment_rs_tuned_dynamo():
     """
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. RS boost active during comparative runs.
+    Threshold physics (Rm~10) is real, but RS tuning comparison is contaminated.
+
     Experiment 9: RS-TUNED DYNAMO THRESHOLD.
 
     Key question: does RS tuning affect the dynamo threshold itself?
     The previous dynamo experiment (8) used generic [1.5, 1.5, 1.5] at 60Hz.
     Here we compare:
-      A) Generic parameters — equal amplitudes, standard frequency, no phase offsets
-      B) RS-tuned for Lead — optimal amplitude ratio, frequency, and phases
-      C) RS-tuned for Mercury — optimize for the FLUID rather than the core
+      A) Generic parameters -- equal amplitudes, standard frequency, no phase offsets
+      B) RS-tuned for Lead -- optimal amplitude ratio, frequency, and phases
+      C) RS-tuned for Mercury -- optimize for the FLUID rather than the core
 
     If RS tuning changes mercury flow patterns (vortex structure, velocity profile),
-    it could shift the effective Rm even at identical σ and scale.
+    it could shift the effective Rm even at identical sigma and scale.
     """
     print("\n=== EXPERIMENT 9: RS-TUNED DYNAMO THRESHOLD ===")
     print("  Does RS tuning lower the dynamo threshold?")
@@ -1189,6 +1239,11 @@ def experiment_rs_tuned_dynamo():
 
 def experiment_multi_element_freqsweep():
     """
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. CIRCULAR. Same issue as experiment 7
+    across multiple elements. The '5/5 match' was reading back hardcoded assumptions.
+
     Experiment 10: MULTI-ELEMENT FREQUENCY SWEEPS.
 
     Experiment 7 confirmed Lead's RS-predicted peak at 40 Hz (predicted 40.5 Hz).
@@ -1198,7 +1253,7 @@ def experiment_multi_element_freqsweep():
       Bi: total=11, predicted 60.5 Hz
       Al: total=7, predicted 24.5 Hz
 
-    If all peak where RS predicts, the formula f = 50 × (total/10)² is validated
+    If all peak where RS predicts, the formula f = 50 x (total/10)^2 is validated
     across the periodic table.
     """
     print("\n=== EXPERIMENT 10: MULTI-ELEMENT FREQUENCY SWEEPS ===")
@@ -1268,7 +1323,7 @@ def experiment_multi_element_freqsweep():
             }
             element_results.append(row)
 
-            marker = " <<< RS PREDICTED" if abs(freq - predicted_freq) < 3 else ""
+            marker = " <<< RS HYPOTHESIS" if abs(freq - predicted_freq) < 3 else ""
             print(f"    {freq:6.1f} Hz: eq={eq_dist:5.1f}mm  t10={str(t_10 or 'never'):>6s}  "
                   f"boost={rs_boost:.2f}x  ({elapsed:.1f}s){marker}")
 
@@ -1315,10 +1370,16 @@ def experiment_multi_element_freqsweep():
 
 def experiment_amplification_curve():
     """
+    WARNING (audit 2026-02-22): This experiment ran with rs_resonance_boost and
+    rs_coupling_factor ACTIVE. RS-specific claims from this experiment are CIRCULAR.
+    Both mechanisms now disabled by default. RS boost active but constant across sigma
+    sweep. Transition shape is real MHD physics. 'RS sector boundary' framing is
+    unwarranted editorial.
+
     Experiment 11: AMPLIFICATION CURVE NEAR DYNAMO THRESHOLD.
 
-    Fine-grain sweep of conductivity multiplier from σ×200 to σ×800 (bench scale).
-    Map the exact transition shape:
+    Fine-grain sweep of conductivity multiplier from sigma x 200 to sigma x 800
+    (bench scale). Map the exact transition shape:
       - Sharp transition = RS sector boundary (discrete)
       - Gradual transition = conventional MHD (continuous)
 
@@ -1611,7 +1672,7 @@ def experiment_cyclotron_resonance():
         summary.append(row)
 
         marker = " <<< CYCLOTRON" if abs(f_ac - f_cyclotron) < 3 else ""
-        marker2 = " <<< RS PREDICTED" if abs(f_ac - MERCURY.rs_optimal_frequency) < 3 else ""
+        marker2 = " <<< RS HYPOTHESIS" if abs(f_ac - MERCURY.rs_optimal_frequency) < 3 else ""
         print(f"  {f_ac:4d} Hz: ΔKE={absorption:+8.2f} eV  Q_3d={Q_3d_avg:.3f}  ({elapsed:.1f}s){marker}{marker2}")
 
     # Find peak
@@ -1989,7 +2050,7 @@ def experiment_phase_sweep():
         summary.append(row)
 
         rs_pred = np.degrees(MERCURY.rs_phase_offsets[2])
-        marker = " <<< RS PREDICTED" if abs(z_phase - rs_pred) < 10 else ""
+        marker = " <<< RS HYPOTHESIS" if abs(z_phase - rs_pred) < 10 else ""
         print(f"  Z-phase={z_phase:4d}°: Q_3d={Q_3d:.4f}  Q_align={Q_align:.3f}  KE={ke:.1f} eV  ({elapsed:.1f}s){marker}")
 
     best = max(summary, key=lambda r: r['Q_3d'])
@@ -2187,14 +2248,18 @@ def experiment_faraday_9cm():
 
 def experiment_mhd_vs_pic_rs():
     """
-    Experiment 18: RS FREQUENCY SIGNIFICANCE — MHD (SPH) vs PIC COMPARISON.
+    WARNING (audit 2026-02-22): MHD portion ran with RS boost ACTIVE. MHD 'peak'
+    at RS frequency is the boost, not collective physics. PIC portion is clean.
+    Comparison conclusions are invalid.
+
+    Experiment 18: RS FREQUENCY SIGNIFICANCE -- MHD (SPH) vs PIC COMPARISON.
 
     QUESTION: Are RS-predicted frequencies special in collective (MHD) physics
-    but NOT in single-particle (PIC) physics? If yes → mechanism is collective.
+    but NOT in single-particle (PIC) physics? If yes -> mechanism is collective.
 
     METHOD: Run matched frequency sweeps for Lead (RS predicts 40.5 Hz):
     - MHD/SPH: liquid mercury, ~100 particles, measures centering performance
-    - PIC: ionized Hg⁺, 1000 particles, measures energy absorption + Q_3d
+    - PIC: ionized Hg+ , 1000 particles, measures energy absorption + Q_3d
 
     Both at 9cm sphere with realistic B (0.17 mT).
 
@@ -2261,7 +2326,7 @@ def experiment_mhd_vs_pic_rs():
         }
         mhd_results.append(row)
 
-        marker = " <<< RS PREDICTED" if abs(freq - LEAD.rs_optimal_frequency) < 3 else ""
+        marker = " <<< RS HYPOTHESIS" if abs(freq - LEAD.rs_optimal_frequency) < 3 else ""
         print(f"    {freq:4d} Hz: eq_dist={eq_dist:5.1f} mm  rs_boost={rs_boost:.2f}x  ({elapsed:.1f}s){marker}")
 
     # Find MHD peak
@@ -2303,7 +2368,7 @@ def experiment_mhd_vs_pic_rs():
         }
         pic_results.append(row)
 
-        marker = " <<< RS PREDICTED" if abs(freq - LEAD.rs_optimal_frequency) < 3 else ""
+        marker = " <<< RS HYPOTHESIS" if abs(freq - LEAD.rs_optimal_frequency) < 3 else ""
         print(f"    {freq:4d} Hz: ΔKE={absorption:+8.3f} eV  Q_3d={Q_3d:.3f}  ({elapsed:.1f}s){marker}")
 
     # Check for PIC peak
@@ -2431,7 +2496,7 @@ def experiment_honest_freqsweep():
             }
             all_results.append(row)
 
-            marker = " <<< RS PREDICTED" if abs(freq - f_rs) < 3 else ""
+            marker = " <<< RS HYPOTHESIS" if abs(freq - f_rs) < 3 else ""
             print(f"    {freq:4d} Hz: eq={eq_dist:5.1f} mm  boost={rs_boost:.2f}x  "
                   f"hg_vel={hg_vel:.1f} mm/s  ({elapsed:.1f}s){marker}")
 

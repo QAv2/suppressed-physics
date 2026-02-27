@@ -80,10 +80,12 @@ The RS-predicted optimal frequency f = 50 × (d/10)² Hz was derived from displa
 1. A coincidence
 2. Evidence that RS displacement structure encodes something about how elements interact with EM fields at the particle level
 
-If (2), then the RS frequency formula is predicting the cyclotron resonance condition: the frequency at which the driving field transfers energy most efficiently to the plasma. This would explain why:
-- RS-tuned parameters outperform generic for all elements (resonant vs. off-resonant coupling)
-- Wrong-element tuning is worse than generic (wrong cyclotron frequency)
-- The effect is sharp in frequency space (resonance has bandwidth)
+If (2), then the RS frequency formula may be predicting the cyclotron resonance condition: the frequency at which the driving field transfers energy most efficiently to the plasma. ~~This would explain why:~~
+~~- RS-tuned parameters outperform generic for all elements~~
+~~- Wrong-element tuning is worse than generic~~
+~~- The effect is sharp in frequency space~~
+
+**CORRECTION (audit 2026-02-22)**: The three "explananda" above were CIRCULAR — the simulator results they reference were produced by a hardcoded RS boost, not emergent physics. The cyclotron frequency coincidence (RS frequencies matching Hg⁺ f_c at bench B) remains an interesting observation that does NOT depend on the circular simulator results. It deserves independent investigation.
 
 **Note**: In the liquid regime, there are no individual particles to have cyclotron frequencies. The RS frequency effect would manifest differently — through skin depth, eddy current penetration, or acoustic resonance. In plasma, it manifests as direct cyclotron resonance. This may be why the Clemens pulse is required: to shift the coupling mechanism from indirect (eddy current) to direct (cyclotron resonance).
 
@@ -140,7 +142,7 @@ In liquid mercury, viscous coupling prevents individual atoms from tracking this
 
 **Liquid**: Energy couples via Ohm's law (J = σE). Frequency-independent to first order (until skin depth effects dominate at high frequency). No resonance condition at low frequencies.
 
-**Plasma**: Energy couples via cyclotron resonance. Sharp frequency dependence. At resonance (ω = ω_c), energy transfer is maximized. Off-resonance, particles don't absorb efficiently. This explains the RS frequency peaks — they ARE cyclotron resonance peaks, shifted by the displacement structure of each element.
+**Plasma**: Energy couples via cyclotron resonance. Sharp frequency dependence. At resonance (ω = ω_c), energy transfer is maximized. Off-resonance, particles don't absorb efficiently. ~~This explains the RS frequency peaks — they ARE cyclotron resonance peaks~~ **CORRECTION**: There are no validated "RS frequency peaks" — the simulator results were circular. The cyclotron resonance physics is real, but it was not shown to connect to RS displacement structure by the simulator.
 
 ### 3. Charge Separation and Hall Effect
 
@@ -248,7 +250,7 @@ At bench scale (5cm sphere):
 
 At bench-scale B-fields (0.5-1 mT), the Hg⁺ cyclotron radius (26 cm) exceeds the sphere radius (5 cm). This means ions are **unmagnetized** — they don't complete cyclotron orbits before hitting the wall.
 
-However: the RS resonance effect operates in the *frequency domain*, not the spatial domain. Cyclotron resonance enhances energy absorption even when particles don't complete full orbits. The resonance condition ω = ω_c is about the ratio of driving frequency to natural orbital frequency, not about whether the orbit fits inside the container.
+However: cyclotron resonance operates in the *frequency domain*, not the spatial domain. ~~The RS resonance effect~~ **Note**: There is no demonstrated "RS resonance effect" — the simulator result was circular. Cyclotron resonance itself is real physics and enhances energy absorption even when particles don't complete full orbits. The resonance condition ω = ω_c is about the ratio of driving frequency to natural orbital frequency, not about whether the orbit fits inside the container. **But**: PIC experiment 17 found NO resonance peak — absorption was monotonic (∝ f^0.87) across all frequencies tested, including RS-predicted ones.
 
 For electrons (r_ce ~ 0.07 mm at 1 eV, 0.5 mT), the cyclotron radius is tiny. Electrons ARE fully magnetized and confined. This creates the asymmetry needed for Hall effects.
 
@@ -258,4 +260,4 @@ For electrons (r_ce ~ 0.07 mm at 1 eV, 0.5 mT), the cyclotron radius is tiny. El
 
 The Hg plasma finding doesn't kill the device concept — it **clarifies the mechanism**. The device isn't a dynamo (bulk current amplification). It's a **cyclotron resonance engine** (direct particle manipulation in a quaternion field pattern). The Clemens pulse transitions mercury from a regime where EM coupling is indirect and viscosity-limited (liquid MHD) to one where coupling is direct and resonant (plasma cyclotron).
 
-The RS frequency formula may encode the cyclotron resonance condition: the frequency at which the three-axis field optimally couples to Hg⁺ ions at the B-field strength that the coil geometry naturally produces. This would be a remarkable bridge between Larson's 1959 displacement theory and measurable plasma physics.
+The RS frequency formula may encode the cyclotron resonance condition — this is an interesting HYPOTHESIS based on the pencil-math coincidence (RS frequencies matching Hg⁺ f_c at bench B), NOT on simulator results (which were circular). **Caveat**: PIC experiments found no resonance peak at RS-predicted frequencies — absorption was monotonic. The connection between RS displacement and cyclotron resonance remains speculative.

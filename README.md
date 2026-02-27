@@ -39,16 +39,21 @@ suppressed-physics/
 
 ## MHD Simulator
 
-Built a real-time 3D simulator (`simulator/`) to test device physics computationally before hardware. Seven experiments completed:
+Built a real-time 3D simulator (`simulator/`) to test device physics computationally before hardware. 21 experiments completed (11 MHD + 5 PIC + 5 honest/comparison).
 
-1. **Core centering** — Pb self-centers via flux pinning in ~0.23s. All 8 materials tested.
-2. **Amplitude sweep** — Centering scales with field strength (0.2–3.0 normalized). Threshold at ~0.5.
-3. **Axis removal** — 3-axis produces tightest centering. Removing any axis degrades performance and shifts equilibrium off-center. Single-axis is worst. **Confirms three-dimensionality requirement.**
-4. **Mercury flow** — SPH particles show 3D vortex structure under orthogonal fields. Asymmetric amplitudes produce asymmetric angular momentum (directional control demonstrated).
-5. **Material-RS correlation** — Centering behavior correlates with RS displacement values across 8 elements.
-6. **RS resonance test** — RS-tuned coil parameters (amplitude ratio, frequency, phase) outperform generic [1,1,1] for **every material tested**. Improvement: 1.04x–1.68x vs generic, 1.21x–2.04x vs wrong-element tuning. Cu and Ag show 2x improvement over wrong tuning.
-7. **Frequency sweep** — Lead shows clean resonance peak at **40 Hz**, exactly matching RS prediction (40.5 Hz for total displacement 9). Monotonic improvement from both directions.
-8. **Dynamo threshold** — Found the self-sustaining field threshold (Rm_crit ≈ 10). Bench-scale ambient Hg is 3 orders below (Rm ≈ 0.03). Four realistic paths to dynamo: liquid sodium in 1m sphere (Rm=12, barely sustaining), enhanced σ at lab scale (50cm, 15.6x amplification), superconducting mercury at 4.2K in bench device (**864x power amplification** — external coils become control surfaces, not power input).
+**AUDIT NOTE (2026-02-22)**: Experiments 1-11 ran with `rs_resonance_boost` and `rs_coupling_factor` active — hardcoded mechanisms that rewarded RS-predicted parameters with up to 2x force multiplier. All RS-specific claims from these experiments are CIRCULAR. Both mechanisms now disabled by default. Only experiments 19-21 and PIC experiments (12-17) produce trustworthy results. See `documents/rs-frequency-circularity.md`.
+
+**What survived the audit (real physics):**
+- **Dynamo threshold** (exp 8, 11) — Rm_crit ≈ 10, sharp transition. Standard MHD. SC-Hg at 4.2K → 864x amplification.
+- **3D plasma rotation** (exp 14) — Q_3d ≈ 1.0 with 3-axis driving, 0.003 with single-axis. Real PIC physics.
+- **Faraday induction** (exp 17) — Monotonic ∝ f^0.87. No RS frequency peak. Real PIC physics.
+- **Eddy-current coupling** (exp 20) — Analytical peak at f_d = 1/(2πμ₀σR²), verified within 3%. Textbook EM.
+- **Hg plasma conductivity** — 150× WORSE than liquid. Classical plasma-dynamo path falsified.
+
+**What was retracted (circular):**
+- ~~RS frequency "validation" 5/5 elements~~ — Hardcoded. Flat when disabled (exp 19).
+- ~~RS amplitude ratios outperform generic~~ — No effect when disabled (exp 21).
+- ~~Material-RS coupling correlation~~ — `rs_coupling_factor` was hardcoded from RS displacement values.
 
 Data: `simulator/data/` (JSON + CSV). Run: `python3 simulator/research.py`
 
@@ -62,9 +67,12 @@ Data: `simulator/data/` (JSON + CSV). Run: `python3 simulator/research.py`
 - [x] Document collection and analysis
 - [x] Convergence mapping
 - [x] MHD simulator built (Phase 1–5 complete)
-- [x] RS resonance prediction tested computationally (confirmed)
-- [x] Frequency resonance peak located (Pb: 40 Hz, matches RS prediction)
-- [x] Dynamo threshold mapped (Rm_crit ≈ 10; SC-Hg at 5cm → 864x amplification)
+- [x] ~~RS resonance prediction tested computationally~~ **RETRACTED** — circular (audit 2026-02-22)
+- [x] ~~Frequency resonance peak located~~ **RETRACTED** — circular (hardcoded boost produced peak)
+- [x] Dynamo threshold mapped (Rm_crit ≈ 10; SC-Hg at 5cm → 864x amplification) — VALID
+- [x] Circularity audit completed (2026-02-22) — RS boost + coupling factor identified and disabled
+- [x] Honest experiments run (19-21): RS frequency flat, RS ratios no effect
+- [x] Rerun experiments 1, 3, 5, 8 with all RS mechanisms disabled — COMPLETED (2026-02-22): All results IDENTICAL to contaminated runs. RS mechanisms had zero effect on equilibrium positions. Real physics: density-driven buoyancy + field geometry.
 - [ ] RS2 → engineering translation (scalar motion → metric manipulation)
 - [ ] QA → device interface formalization
 - [ ] Bench engineering feasibility assessment

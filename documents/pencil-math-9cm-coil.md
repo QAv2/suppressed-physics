@@ -180,10 +180,12 @@ This is not close. The coils would need to produce ~300× more field to get magn
 2. Much lower ion temperatures (but then it's not really a plasma), OR
 3. The mechanism doesn't rely on classical cyclotron resonance at all
 
-Option 3 is worth taking seriously. The RS frequency formula works in the MHD simulator (5/5 elements confirmed) at B-fields where orbits are NOT magnetized. This might mean:
-- The coupling mechanism is through Faraday induction (E ∝ ω), not cyclotron resonance
-- The RS frequencies encode something other than cyclotron resonance
-- There's a collective/MHD effect that doesn't require individual ion magnetization
+Option 3 is worth taking seriously. ~~The RS frequency formula works in the MHD simulator (5/5 elements confirmed)~~ **CORRECTION (audit 2026-02-22)**: The "5/5 confirmed" result was CIRCULAR — the simulator hardcoded a boost favoring RS-predicted frequencies. When the boost was disabled (experiment 19), frequency sweeps were flat. The RS frequency formula is an untested hypothesis.
+
+That said, the mechanism question remains open:
+- Faraday induction (E ∝ ω) is the dominant energy transfer mechanism (PIC experiment 17: monotonic ∝ f^0.87)
+- Textbook eddy-current coupling peaks at f_d = 1/(2πμ₀σR²) — verified analytically (exp 20)
+- There may be collective/MHD effects that don't require individual ion magnetization
 
 ### What this does NOT disprove
 - It does not disprove that the device works — only that classical single-particle cyclotron resonance is unlikely to be the mechanism at these parameters
